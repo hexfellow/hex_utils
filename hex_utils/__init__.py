@@ -6,7 +6,7 @@
 # Date  : 2025-01-14
 ################################################################
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from ._hex_stamp import HexStamp
 from ._hex_arm_ctrl import HexArmCtrl, HexArmCtrlStamped
@@ -16,6 +16,8 @@ from ._hex_cart_state import HexCartState, HexCartStateStamped
 from ._hex_cart_vel import HexCartVel, HexCartVelStamped
 from ._hex_sensor_cloud import HexSensorCloudStamped
 from ._hex_sensor_imu import HexSensorImu, HexSensorImuStamped
+from ._hex_sensor_imu import HexSensorImuQuat, HexSensorImuQuatStamped
+from ._hex_sensor_mag import HexSensorMag, HexSensorMagStamped
 from ._hex_sensor_scan import HexSensorScan, HexSensorScanStamped
 
 from ._math_util import cross_matrix
@@ -59,6 +61,10 @@ __all__ = [
     'HexSensorCloudStamped',
     'HexSensorImu',
     'HexSensorImuStamped',
+    'HexSensorImuQuat',
+    'HexSensorImuQuatStamped',
+    'HexSensorMag',
+    'HexSensorMagStamped',
     'HexSensorScan',
     'HexSensorScanStamped',
     # math_util
