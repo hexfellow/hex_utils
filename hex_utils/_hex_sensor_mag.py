@@ -11,7 +11,7 @@ import numpy as np
 
 from hex_utils._hex_stamp import HexStamp
 
-class HexSensorMagneticField:
+class HexSensorMag:
     def __init__(
             self,
             magnetic_field=np.zeros(3),
@@ -41,12 +41,12 @@ class HexSensorMagneticField:
         else:
             raise TypeError(f"set magnetic_field type err: {type(magnetic_field)}")
 
-class HexSensorMagneticFieldStamped:
+class HexSensorMagStamped:
 
     def __init__(
             self,
             stamp=HexStamp(),
-            magnetic_field=HexSensorMagneticField(),
+            magnetic_field=HexSensorMag(),
     ):
         if self.__is_stamp(stamp):
             self.__stamp = copy.deepcopy(stamp)
@@ -66,7 +66,7 @@ class HexSensorMagneticFieldStamped:
         return isinstance(stamp, HexStamp)
 
     def __is_magnetic_field(self, magnetic_field):
-        return isinstance(magnetic_field, HexSensorMagneticField)
+        return isinstance(magnetic_field, HexSensorMag)
 
     def stamp(self):
         return self.__stamp
@@ -95,8 +95,8 @@ class HexSensorMagneticFieldStamped:
 def main():
     stamp = HexStamp(1, 2)
     magnetic_field = np.array([1.0, 2.0, 3.0])
-    magnetic_field_raw = HexSensorMagneticField(magnetic_field)
-    magnetic_field_stamped_raw = HexSensorMagneticFieldStamped(stamp, magnetic_field_raw)
+    magnetic_field_raw = HexSensorMag(magnetic_field)
+    magnetic_field_stamped_raw = HexSensorMagStamped(stamp, magnetic_field_raw)
     print(f"magnetic_field_raw: {magnetic_field_raw}")
     print(f"magnetic_field_stamped_raw: {magnetic_field_stamped_raw}")
 
