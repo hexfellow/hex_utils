@@ -166,7 +166,7 @@ def rot2quat(rot: np.ndarray) -> np.ndarray:
         qx = (rot[0, 2] + rot[2, 0]) / (4 * qz)
         qy = (rot[2, 1] + rot[1, 2]) / (4 * qz)
     else:
-        raise ValueError("The rotation matrix is not valid!")
+        raise ValueError(f"The rotation matrix is not valid! {rot}")
 
     return np.array([qw, qx, qy, qz])
 
@@ -265,12 +265,15 @@ def trans2se3(trans: np.ndarray) -> np.ndarray:
     # temp vars
     pos, quat = trans2part(trans)
 
+    # normalize
+    q = quat / np.linalg.norm(quat)
+
     # se3
-    angle = 2 * np.arccos(quat[0])
+    angle = 2 * np.arccos(q[0])
     if angle < 1e-6:
         return np.concatenate((pos, np.zeros(3)))
     else:
-        axis = quat[1:] / np.sin(angle / 2)
+        axis = q[1:] / np.sin(angle / 2)
         return np.concatenate((pos, axis * angle))
 
 
