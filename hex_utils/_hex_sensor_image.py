@@ -7,6 +7,7 @@
 ################################################################
 
 import copy
+import cv2
 import numpy as np
 
 from hex_utils._hex_stamp import HexStamp
@@ -17,7 +18,7 @@ class HexSensorImageStamped:
     def __init__(
             self,
             stamp=HexStamp(),
-            image=np.zeros((640, 480, 3), dtype=np.uint8),
+            image=np.zeros((480, 640, 3), dtype=np.uint8),
     ):
         if self.__is_stamp(stamp):
             self.__stamp = copy.deepcopy(stamp)
@@ -66,7 +67,7 @@ class HexSensorImageStamped:
 
 def main():
     stamp = HexStamp(1, 2)
-    image_raw = np.ones((640, 480, 3), dtype=np.uint8) * 127
+    image_raw = np.ones((480, 640, 3), dtype=np.uint8) * 127
     image_stamped_raw = HexSensorImageStamped(stamp, image_raw)
     print(f"image_stamped_raw: {image_stamped_raw}")
 
@@ -75,11 +76,17 @@ def main():
     image_equal = image_raw
     image_copy = copy.copy(image_raw)
     image_deepcopy = copy.deepcopy(image_raw)
-    image_raw = np.ones((320, 240, 3), dtype=np.uint8) * 255
+    image_raw = np.ones((240, 320, 3), dtype=np.uint8) * 255
     print(f"image_raw: {image_raw.shape}")
+    cv2.imshow("image_raw", image_raw)
     print(f"image_equal: {image_equal.shape}")
+    cv2.imshow("image_equal", image_equal)
     print(f"image_copy: {image_copy.shape}")
+    cv2.imshow("image_copy", image_copy)
     print(f"image_deepcopy: {image_deepcopy.shape}")
+    cv2.imshow("image_deepcopy", image_deepcopy)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
     print("\n#### image_stamped copy ####")
     image_stamped_equal = None
@@ -87,11 +94,17 @@ def main():
     image_stamped_copy = copy.copy(image_stamped_raw)
     image_stamped_deepcopy = copy.deepcopy(image_stamped_raw)
     image_stamped_raw.stamp().set_time(3)
-    image_stamped_raw.set_image(np.ones((320, 240, 3), dtype=np.uint8) * 255)
+    image_stamped_raw.set_image(np.ones((240, 320, 3), dtype=np.uint8) * 255)
     print(f"image_stamped_raw: {image_stamped_raw}")
+    cv2.imshow("image_stamped_raw", image_stamped_raw.image())
     print(f"image_stamped_equal: {image_stamped_equal}")
+    cv2.imshow("image_stamped_equal", image_stamped_equal.image())
     print(f"image_stamped_copy: {image_stamped_copy}")
+    cv2.imshow("image_stamped_copy", image_stamped_copy.image())
     print(f"image_stamped_deepcopy: {image_stamped_deepcopy}")
+    cv2.imshow("image_stamped_deepcopy", image_stamped_deepcopy.image())
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
