@@ -11,7 +11,7 @@ import numpy as np
 import pinocchio as pin
 from typing import Tuple
 
-from hex_utils._math_util import part2trans, trans_inv, trans2se3
+from hex_utils._math_util import part2trans, rot2quat, trans_inv, trans2se3
 from hex_utils._hex_arm_state import HexArmState
 from hex_utils._hex_cart_pose import HexCartPose
 
@@ -81,17 +81,22 @@ class DynUtil:
         return m_mat, c_mat, g_vec, jac, jac_dot
 
     # get [pose_1, pose_2, ..., pose_n]
-    def forward_kinematics(self, arm_state: HexArmState) -> np.ndarray:
+    def forward_kinematics(self, arm_state: HexArmState) -> HexCartPose:
         q = arm_state.get_pos()
 
         # Compute forward kinematics to update joint placements
         pin.forwardKinematics(self.__model, self.__data, q)
 
         # Collect the poses of all joints
-        joint_poses = np.zeros((self.__joint_num - 1, 4, 4))
+        joint_poses = []
         for i in range(1, self.__joint_num):
             joint_placement = self.__data.oMi[i]
-            joint_poses[i - 1] = joint_placement.homogeneous
+            trans = joint_placement.homogeneous
+            joint_poses.append(
+                HexCartPose(
+                    pos=trans[:3, 3],
+                    quat=rot2quat(trans[:3, :3]),
+                ))
 
         return joint_poses
 
@@ -104,7 +109,7 @@ class DynUtil:
         feasible_eps: float = 1e-2,
         damp: float = 1e-12,
         max_iter: int = 300,
-    ) -> np.ndarray:
+    ) -> Tuple[bool, HexArmState, float]:
         result_joints = copy.deepcopy(start_joints.get_pos())
         trans_tar_in_base = copy.deepcopy(
             part2trans(
@@ -143,4 +148,10 @@ class DynUtil:
         if err_norm < feasible_eps:
             result_flag = True
 
-        return result_flag, result_joints, err_norm
+        result_state = HexArmState(
+            pos=result_joints,
+            vel=np.zeros_like(result_joints),
+            acc=np.zeros_like(result_joints),
+        )
+
+        return result_flag, result_state, err_norm
