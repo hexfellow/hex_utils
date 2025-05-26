@@ -6,7 +6,7 @@
 # Date  : 2025-01-14
 ################################################################
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from ._hex_stamp import HexStamp
 from ._hex_arm_ctrl import HexArmCtrl, HexArmCtrlStamped
@@ -19,6 +19,8 @@ from ._hex_sensor_imu import HexSensorImu, HexSensorImuStamped
 from ._hex_sensor_imu import HexSensorImuQuat, HexSensorImuQuatStamped
 from ._hex_sensor_mag import HexSensorMag, HexSensorMagStamped
 from ._hex_sensor_scan import HexSensorScan, HexSensorScanStamped
+
+from ._dyn_util import DynUtil
 
 from ._math_util import cross_matrix
 from ._math_util import rad2deg
@@ -67,6 +69,8 @@ __all__ = [
     'HexSensorMagStamped',
     'HexSensorScan',
     'HexSensorScanStamped',
+    # dyn_util
+    'DynUtil',
     # math_util
     'cross_matrix',
     'rad2deg',

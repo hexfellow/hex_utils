@@ -94,6 +94,25 @@ def main():
     print(f"cloud_copy: {cloud_copy}")
     print(f"cloud_deepcopy: {cloud_deepcopy}")
 
+    print("\n#### cloud_stamped copy ####")
+    cloud_stamped_equal = None
+    cloud_stamped_equal = cloud_stamped_raw
+    cloud_stamped_copy = copy.copy(cloud_stamped_raw)
+    cloud_stamped_deepcopy = copy.deepcopy(cloud_stamped_raw)
+    cloud_stamped_raw.stamp().set_time(3)
+    cloud_stamped_raw.cloud().point.positions = o3c.Tensor(
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]], dtype=o3c.float32)
+    cloud_stamped_raw.cloud().point.colors = o3c.Tensor(
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=o3c.float32)
+    cloud_stamped_raw.cloud().point.normals = o3c.Tensor(
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=o3c.float32)
+    cloud_stamped_raw.cloud().point.labels = o3c.Tensor([1, 2, 3],
+                                                        dtype=o3c.int32)
+    print(f"cloud_stamped_raw: {cloud_stamped_raw}")
+    print(f"cloud_stamped_equal: {cloud_stamped_equal}")
+    print(f"cloud_stamped_copy: {cloud_stamped_copy}")
+    print(f"cloud_stamped_deepcopy: {cloud_stamped_deepcopy}")
+
 
 if __name__ == "__main__":
     main()
