@@ -42,7 +42,7 @@ class DynUtil:
 
     # get [M(q), C(q, q_dot), G(q), J(q), J_dot(q, q_dot)]
     # v = J @ q_dot
-    def get_dynamic_params(
+    def dynamic_params(
         self,
         arm_state: HexArmState,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -81,7 +81,7 @@ class DynUtil:
         return m_mat, c_mat, g_vec, jac, jac_dot
 
     # get [pose_1, pose_2, ..., pose_n]
-    def get_joint_poses(self, arm_state: HexArmState) -> np.ndarray:
+    def forward_kinematics(self, arm_state: HexArmState) -> np.ndarray:
         q = arm_state.get_pos()
 
         # Compute forward kinematics to update joint placements
