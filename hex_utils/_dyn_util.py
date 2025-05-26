@@ -11,7 +11,9 @@ import numpy as np
 import pinocchio as pin
 from typing import Tuple
 
-from hex_utils._math_util import part2trans, rot2quat, trans_inv, trans2se3
+from hex_utils._math_util import trans2part, part2trans
+from hex_utils._math_util import trans_inv, trans2se3
+from hex_utils._math_util import angle_norm
 from hex_utils._hex_arm_state import HexArmState
 from hex_utils._hex_cart_pose import HexCartPose
 
@@ -39,6 +41,9 @@ class DynUtil:
             gravity: np.ndarray = np.array([0, 0, -9.81]),
     ):
         self.__model.gravity.linear = gravity
+
+    def get_joint_num(self) -> int:
+        return self.__joint_num
 
     # get [M(q), C(q, q_dot), G(q), J(q), J_dot(q, q_dot)]
     # v = J @ q_dot
@@ -90,13 +95,9 @@ class DynUtil:
         # Collect the poses of all joints
         joint_poses = []
         for i in range(1, self.__joint_num):
-            joint_placement = self.__data.oMi[i]
-            trans = joint_placement.homogeneous
-            joint_poses.append(
-                HexCartPose(
-                    pos=trans[:3, 3],
-                    quat=rot2quat(trans[:3, :3]),
-                ))
+            trans = self.__data.oMi[i].homogeneous
+            pos, quat = trans2part(trans)
+            joint_poses.append(HexCartPose(pos=pos, quat=quat))
 
         return joint_poses
 
@@ -149,9 +150,9 @@ class DynUtil:
             result_flag = True
 
         result_state = HexArmState(
-            pos=result_joints,
+            pos=angle_norm(result_joints),
             vel=np.zeros_like(result_joints),
-            acc=np.zeros_like(result_joints),
+            eff=np.zeros_like(result_joints),
         )
 
         return result_flag, result_state, err_norm
