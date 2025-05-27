@@ -29,9 +29,9 @@ class DynUtil:
         ### pinocchio init
         self.__model = pin.buildModelFromUrdf(model_path)
         self.__data = self.__model.createData()
-        self.__joint_num = self.__model.njoints
+        self.__joint_num = self.__model.njoints - 1
         self.__end_link_id = self.__model.getFrameId(end_effector)
-        self.__end_joint_id = self.__joint_num - 1
+        self.__end_joint_id = self.__joint_num
 
         ### gravity vector
         self.__model.gravity.linear = gravity
@@ -94,8 +94,8 @@ class DynUtil:
 
         # Collect the poses of all joints
         joint_poses = []
-        for i in range(1, self.__joint_num):
-            trans = self.__data.oMi[i].homogeneous
+        for i in range(self.__joint_num):
+            trans = self.__data.oMi[i + 1].homogeneous
             pos, quat = trans2part(trans)
             joint_poses.append(HexCartPose(pos=pos, quat=quat))
 
