@@ -6,7 +6,7 @@
 # Date  : 2025-01-14
 ################################################################
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 from ._hex_stamp import HexStamp
 from ._hex_arm_ctrl import HexArmCtrl, HexArmCtrlStamped
@@ -21,29 +21,30 @@ from ._hex_sensor_mag import HexSensorMag, HexSensorMagStamped
 from ._hex_sensor_scan import HexSensorScan, HexSensorScanStamped
 
 from ._dyn_util import DynUtil
+from ._obs_util import ObsUtil
 
-from ._math_util import cross_matrix
-from ._math_util import rad2deg
-from ._math_util import deg2rad
-from ._math_util import angle_norm
-from ._math_util import quat_slerp
-from ._math_util import quat_mul
-from ._math_util import quat_inv
-from ._math_util import trans_inv
-from ._math_util import quat2rot
-from ._math_util import rot2quat
-from ._math_util import axis2rot
-from ._math_util import rot2axis
-from ._math_util import quat2axis
-from ._math_util import axis2quat
-from ._math_util import part2trans
-from ._math_util import trans2part
-from ._math_util import se32trans
-from ._math_util import trans2se3
-from ._math_util import zyz2rot
-from ._math_util import rot2zyz
-from ._math_util import yaw2quat
-from ._math_util import quat2yaw
+from ._math_utils import cross_matrix
+from ._math_utils import rad2deg
+from ._math_utils import deg2rad
+from ._math_utils import angle_norm
+from ._math_utils import quat_slerp
+from ._math_utils import quat_mul
+from ._math_utils import quat_inv
+from ._math_utils import trans_inv
+from ._math_utils import quat2rot
+from ._math_utils import rot2quat
+from ._math_utils import axis2rot
+from ._math_utils import rot2axis
+from ._math_utils import quat2axis
+from ._math_utils import axis2quat
+from ._math_utils import part2trans
+from ._math_utils import trans2part
+from ._math_utils import se32trans
+from ._math_utils import trans2se3
+from ._math_utils import zyz2rot
+from ._math_utils import rot2zyz
+from ._math_utils import yaw2quat
+from ._math_utils import quat2yaw
 
 __all__ = [
     # version
@@ -69,9 +70,10 @@ __all__ = [
     'HexSensorMagStamped',
     'HexSensorScan',
     'HexSensorScanStamped',
-    # dyn_util
+    # utils
     'DynUtil',
-    # math_util
+    'ObsUtil',
+    # math
     'cross_matrix',
     'rad2deg',
     'deg2rad',

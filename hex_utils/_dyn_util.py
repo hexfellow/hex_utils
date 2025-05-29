@@ -11,9 +11,9 @@ import numpy as np
 import pinocchio as pin
 from typing import Tuple
 
-from hex_utils._math_util import trans2part, part2trans
-from hex_utils._math_util import trans_inv, trans2se3
-from hex_utils._math_util import angle_norm
+from hex_utils._math_utils import trans2part, part2trans
+from hex_utils._math_utils import trans_inv, trans2se3
+from hex_utils._math_utils import angle_norm
 from hex_utils._hex_arm_state import HexArmState
 from hex_utils._hex_cart_pose import HexCartPose
 
