@@ -10,7 +10,8 @@ import numpy as np
 from typing import Tuple
 
 
-def cross_matrix(vec: np.ndarray):
+def hat(vec: np.ndarray):
+    """so(3) vector → skew-symmetric matrix"""
     assert vec.shape == (3, ), "cross_matrix vec shape err"
 
     trans = np.array([
@@ -19,6 +20,14 @@ def cross_matrix(vec: np.ndarray):
         [-vec[1], vec[0], 0.0],
     ])
     return trans
+
+
+def vee(mat: np.ndarray):
+    """skew-symmetric matrix → so(3) vector"""
+    assert mat.shape == (3, 3), "cross_matrix_inv mat shape err"
+
+    vec = np.array([mat[2, 1], mat[0, 2], mat[1, 0]])
+    return vec
 
 
 def rad2deg(rad):
@@ -41,7 +50,11 @@ def quat_slerp(q1: np.ndarray, q2: np.ndarray, t: float) -> np.ndarray:
 
     # normalize
     q1_norm = q1 / np.linalg.norm(q1)
+    if q1_norm[0] < 0.0:
+        q1_norm = -q1_norm
     q2_norm = q2 / np.linalg.norm(q2)
+    if q2_norm[0] < 0.0:
+        q2_norm = -q2_norm
 
     # dot
     dot = np.dot(q1_norm, q2_norm)
@@ -69,7 +82,11 @@ def quat_mul(q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
 
     # normalize
     q1_norm = q1 / np.linalg.norm(q1)
+    if q1_norm[0] < 0.0:
+        q1_norm = -q1_norm
     q2_norm = q2 / np.linalg.norm(q2)
+    if q2_norm[0] < 0.0:
+        q2_norm = -q2_norm
 
     # mul
     w1, x1, y1, z1 = q1_norm
@@ -84,9 +101,12 @@ def quat_mul(q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
 
 def quat_inv(quat: np.ndarray) -> np.ndarray:
     assert quat.shape == (4, ), "quat_inv quat shape err"
+    q = quat / np.linalg.norm(quat)
+    if q[0] < 0.0:
+        q = -q
 
     # inv
-    inv = np.array([quat[0], -quat[1], -quat[2], -quat[3]])
+    inv = np.array([q[0], -q[1], -q[2], -q[3]])
     return inv
 
 
@@ -103,11 +123,67 @@ def trans_inv(trans: np.ndarray) -> np.ndarray:
     return inv
 
 
+def rot2quat(rot: np.ndarray) -> np.ndarray:
+    assert rot.shape == (3, 3), "rot2quat rot shape err"
+
+    qw, qx, qy, qz = 1, 0, 0, 0
+    trace = np.trace(rot)
+    if trace > 0:
+        temp = 2.0 * np.sqrt(1 + trace)
+        qw = 0.25 * temp
+        qx = (rot[2, 1] - rot[1, 2]) / temp
+        qy = (rot[0, 2] - rot[2, 0]) / temp
+        qz = (rot[1, 0] - rot[0, 1]) / temp
+    else:
+        if rot[0, 0] > rot[1, 1] and rot[0, 0] > rot[2, 2]:
+            temp = 2.0 * np.sqrt(1 + rot[0, 0] - rot[1, 1] - rot[2, 2])
+            qw = (rot[2, 1] - rot[1, 2]) / temp
+            qx = 0.25 * temp
+            qy = (rot[1, 0] + rot[0, 1]) / temp
+            qz = (rot[0, 2] + rot[2, 0]) / temp
+        elif rot[1, 1] > rot[2, 2]:
+            temp = 2.0 * np.sqrt(1 + rot[1, 1] - rot[0, 0] - rot[2, 2])
+            qw = (rot[0, 2] - rot[2, 0]) / temp
+            qx = (rot[1, 0] + rot[0, 1]) / temp
+            qy = 0.25 * temp
+            qz = (rot[2, 1] + rot[1, 2]) / temp
+        else:
+            temp = 2.0 * np.sqrt(1 + rot[2, 2] - rot[0, 0] - rot[1, 1])
+            qw = (rot[1, 0] - rot[0, 1]) / temp
+            qx = (rot[0, 2] + rot[2, 0]) / temp
+            qy = (rot[2, 1] + rot[1, 2]) / temp
+            qz = 0.25 * temp
+
+    return np.array([qw, qx, qy, qz])
+
+
+def rot2axis(rot: np.ndarray) -> Tuple[np.ndarray, float]:
+    assert rot.shape == (3, 3), "rot2axis rot shape err"
+
+    cos_theta = 0.5 * (np.trace(rot) - 1)
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)
+    theta = np.arccos(cos_theta)
+
+    if theta < 1e-6:
+        return np.array([1.0, 0.0, 0.0]), 0.0
+    else:
+        axis_matrix = (rot - rot.T) / (2 * np.sin(theta))
+        axis = vee(axis_matrix)
+    return axis, theta
+
+
+def rot2so3(rot: np.ndarray) -> np.ndarray:
+    assert rot.shape == (3, 3), "rot2so3 rot shape err"
+
+    axis, theta = rot2axis(rot)
+    return theta * axis
+
+
 def quat2rot(quat: np.ndarray) -> np.ndarray:
     assert quat.shape == (4, ), "quat2rot quat shape err"
-
-    # normalize
     q = quat / np.linalg.norm(quat)
+    if q[0] < 0.0:
+        q = -q
 
     # temp vars
     qx2 = q[1] * q[1]
@@ -141,88 +217,97 @@ def quat2rot(quat: np.ndarray) -> np.ndarray:
     return rot
 
 
-def rot2quat(rot: np.ndarray) -> np.ndarray:
-    assert rot.shape == (3, 3), "rot2quat rot shape err"
+def quat2axis(quat: np.ndarray) -> Tuple[np.ndarray, float]:
+    assert quat.shape == (4, ), "quat2axis quat shape err"
+    q = quat / np.linalg.norm(quat)
+    if q[0] < 0.0:
+        q = -q
 
-    qw, qx, qy, qz = 1, 0, 0, 0
-    if 1 + rot[0, 0] + rot[1, 1] + rot[2, 2] > 0:
-        qw = np.sqrt(1 + rot[0, 0] + rot[1, 1] + rot[2, 2]) / 2
-        qx = (rot[2, 1] - rot[1, 2]) / (4 * qw)
-        qy = (rot[0, 2] - rot[2, 0]) / (4 * qw)
-        qz = (rot[1, 0] - rot[0, 1]) / (4 * qw)
-    elif 1 + rot[0, 0] - rot[1, 1] - rot[2, 2] > 0:
-        qx = np.sqrt(1 + rot[0, 0] - rot[1, 1] - rot[2, 2]) / 2
-        qw = (rot[2, 1] - rot[1, 2]) / (4 * qx)
-        qy = (rot[1, 0] + rot[0, 1]) / (4 * qx)
-        qz = (rot[0, 2] + rot[2, 0]) / (4 * qx)
-    elif 1 - rot[0, 0] + rot[1, 1] - rot[2, 2] > 0:
-        qy = np.sqrt(1 - rot[0, 0] + rot[1, 1] - rot[2, 2]) / 2
-        qw = (rot[0, 2] - rot[2, 0]) / (4 * qy)
-        qx = (rot[1, 0] + rot[0, 1]) / (4 * qy)
-        qz = (rot[2, 1] + rot[1, 2]) / (4 * qy)
-    elif 1 - rot[0, 0] - rot[1, 1] + rot[2, 2] > 0:
-        qz = np.sqrt(1 - rot[0, 0] - rot[1, 1] + rot[2, 2]) / 2
-        qw = (rot[1, 0] - rot[0, 1]) / (4 * qz)
-        qx = (rot[0, 2] + rot[2, 0]) / (4 * qz)
-        qy = (rot[2, 1] + rot[1, 2]) / (4 * qz)
-    else:
-        raise ValueError(f"The rotation matrix is not valid! {rot}")
+    vec = q[1:]
+    norm_vec = np.linalg.norm(vec)
+    if norm_vec < 1e-6:
+        return np.array([1.0, 0.0, 0.0]), 0.0
 
-    return np.array([qw, qx, qy, qz])
+    theta = 2 * np.arctan2(norm_vec, q[0])
+    axis = vec / norm_vec
+    return axis, theta
 
 
-def axis2rot(axis: np.ndarray, angle: float) -> np.ndarray:
+def quat2so3(quat: np.ndarray) -> np.ndarray:
+    assert quat.shape == (4, ), "quat2so3 quat shape err"
+
+    axis, theta = quat2axis(quat)
+    return theta * axis
+
+
+def axis2rot(axis: np.ndarray, theta: float) -> np.ndarray:
     assert axis.shape == (3, ), "axis2rot axis shape err"
+    if theta < 1e-6:
+        return np.eye(3)
 
-    axis_matrix = cross_matrix(axis)
-    sin_angle = np.sin(angle)
-    cos_angle = np.cos(angle)
-    rot = np.eye(3) * cos_angle + (1 - cos_angle) * np.outer(
-        axis, axis) + sin_angle * axis_matrix
+    axis_matrix = hat(axis)
+    rot = np.eye(3) + np.sin(theta) * axis_matrix + (1 - np.cos(theta)) * (
+        axis_matrix @ axis_matrix)
     return rot
 
 
-def rot2axis(rot: np.ndarray) -> Tuple[np.ndarray, float]:
-    assert rot.shape == (3, 3), "rot2axis rot shape err"
-    assert np.trace(rot) <= 3.0 and np.trace(
-        rot) >= -1.0, "rot2axis rot track err"
-
-    angle = np.arccos(0.5 * (np.trace(rot) - 1))
-    if angle < 1e-6:
-        return np.array([1.0, 0.0, 0.0]), 0.0
-    else:
-        axis = np.array([
-            rot[2, 1] - rot[1, 2],
-            rot[0, 2] - rot[2, 0],
-            rot[1, 0] - rot[0, 1],
-        ]) / (2.0 * np.sin(angle))
-    return axis, angle
-
-
-def quat2axis(quat: np.ndarray) -> Tuple[np.ndarray, float]:
-    assert quat.shape == (4, ), "quat2axis quat shape err"
-
-    # normalize
-    q = quat / np.linalg.norm(quat)
-
-    # angle
-    angle = 2 * np.arccos(q[0])
-
-    # axis
-    if angle < 1e-6:
-        return np.array([1.0, 0.0, 0.0]), 0.0
-    else:
-        axis = q[1:] / np.sin(angle / 2)
-    return axis, angle
-
-
-def axis2quat(axis: np.ndarray, angle: float) -> np.ndarray:
+def axis2quat(axis: np.ndarray, theta: float) -> np.ndarray:
     assert axis.shape == (3, ), "axis2quat axis shape err"
+    if theta < 1e-6:
+        return np.array([1.0, 0.0, 0.0, 0.0])
 
     quat = np.zeros(4)
-    quat[0] = np.cos(angle / 2)
-    quat[1:] = axis * np.sin(angle / 2)
+    quat[0] = np.cos(theta / 2)
+    quat[1:] = axis * np.sin(theta / 2)
     return quat
+
+
+def axis2so3(axis: np.ndarray, theta: float) -> np.ndarray:
+    assert axis.shape == (3, ), "axis2so3 axis shape err"
+
+    return theta * axis
+
+
+def so32rot(so3: np.ndarray) -> np.ndarray:
+    assert so3.shape == (3, ), "so32quat so3 shape err"
+
+    theta = np.linalg.norm(so3)
+    if theta < 1e-6:
+        return np.eye(3)
+    else:
+        axis = so3 / theta
+        return axis2rot(axis, theta)
+
+
+def so32quat(so3: np.ndarray) -> np.ndarray:
+    assert so3.shape == (3, ), "so32quat so3 shape err"
+
+    axis, theta = so32axis(so3)
+    return axis2quat(axis, theta)
+
+
+def so32axis(so3: np.ndarray) -> Tuple[np.ndarray, float]:
+    assert so3.shape == (3, ), "so32axis so3 shape err"
+    theta = np.linalg.norm(so3)
+    if theta < 1e-6:
+        return np.array([1.0, 0.0, 0.0]), 0.0
+    else:
+        axis = so3 / theta
+        return axis, theta
+
+
+def trans2part(trans: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    assert trans.shape == (4, 4), "trans2part trans shape err"
+
+    pos = trans[:3, 3]
+    quat = rot2quat(trans[:3, :3])
+    return pos, quat
+
+
+def trans2se3(trans: np.ndarray) -> np.ndarray:
+    assert trans.shape == (4, 4), "trans2se3 trans shape err"
+
+    return np.concatenate((trans[:3, 3], rot2so3(trans[:3, :3])))
 
 
 def part2trans(pos: np.ndarray, quat: np.ndarray) -> np.ndarray:
@@ -235,46 +320,27 @@ def part2trans(pos: np.ndarray, quat: np.ndarray) -> np.ndarray:
     return trans
 
 
-def trans2part(trans: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    assert trans.shape == (4, 4), "trans2part trans shape err"
+def part2se3(pos: np.ndarray, quat: np.ndarray) -> np.ndarray:
+    assert pos.shape == (3, ), "part2se3 pos shape err"
+    assert quat.shape == (4, ), "part2se3 quat shape err"
 
-    pos = trans[:3, 3]
-    quat = rot2quat(trans[:3, :3])
-    return pos, quat
+    se3 = np.concatenate((pos, quat2so3(quat)))
+    return se3
 
 
 def se32trans(se3: np.ndarray) -> np.ndarray:
     assert se3.shape == (6, ), "se32trans se3 shape err"
 
-    # temp vars
-    pos = se3[:3]
-    angle = np.linalg.norm(se3[3:])
-
-    # trans
-    if angle < 1e-6:
-        return part2trans(pos, np.array([1.0, 0.0, 0.0, 0.0]))
-    else:
-        axis = se3[3:] / angle
-        quat = axis2quat(axis, angle)
-        return part2trans(pos, quat)
+    trans = np.eye(4)
+    trans[:3, 3] = se3[:3]
+    trans[:3, :3] = so32rot(se3[3:])
+    return trans
 
 
-def trans2se3(trans: np.ndarray) -> np.ndarray:
-    assert trans.shape == (4, 4), "trans2se3 trans shape err"
+def se32part(se3: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    assert se3.shape == (6, ), "se32part se3 shape err"
 
-    # temp vars
-    pos, quat = trans2part(trans)
-
-    # normalize
-    q = quat / np.linalg.norm(quat)
-
-    # se3
-    angle = 2 * np.arccos(q[0])
-    if angle < 1e-6:
-        return np.concatenate((pos, np.zeros(3)))
-    else:
-        axis = q[1:] / np.sin(angle / 2)
-        return np.concatenate((pos, axis * angle))
+    return se3[:3], so32quat(se3[3:])
 
 
 def zyz2rot(zyz: np.ndarray) -> np.ndarray:
