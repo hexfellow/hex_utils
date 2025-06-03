@@ -15,11 +15,13 @@ from ._hex_cart_pose import HexCartPose, HexCartPoseStamped
 from ._hex_cart_state import HexCartState, HexCartStateStamped
 from ._hex_cart_vel import HexCartVel, HexCartVelStamped
 from ._hex_sensor_cloud import HexSensorCloudStamped
+from ._hex_sensor_image import HexSensorImageStamped
 from ._hex_sensor_imu import HexSensorImu, HexSensorImuStamped
 from ._hex_sensor_imu import HexSensorImuQuat, HexSensorImuQuatStamped
 from ._hex_sensor_mag import HexSensorMag, HexSensorMagStamped
 from ._hex_sensor_scan import HexSensorScan, HexSensorScanStamped
 
+# utils
 from ._dyn_util import DynUtil
 from ._obs_util import ObsUtilJoint
 from ._obs_util import ObsUtilWork
@@ -79,6 +81,7 @@ __all__ = [
     'HexCartState',
     'HexCartStateStamped',
     'HexSensorCloudStamped',
+    'HexSensorImageStamped',
     'HexSensorImu',
     'HexSensorImuStamped',
     'HexSensorImuQuat',
