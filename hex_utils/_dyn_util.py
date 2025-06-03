@@ -9,7 +9,7 @@
 import copy
 import numpy as np
 import pinocchio as pin
-from typing import Tuple
+from typing import Tuple, List
 
 from hex_utils._math_utils import trans2part, part2trans
 from hex_utils._math_utils import trans_inv, trans2se3
@@ -86,7 +86,7 @@ class DynUtil:
         return m_mat, c_mat, g_vec, jac, jac_dot
 
     # get [pose_1, pose_2, ..., pose_n]
-    def forward_kinematics(self, arm_state: HexArmState) -> HexCartPose:
+    def forward_kinematics(self, arm_state: HexArmState) -> List[HexCartPose]:
         q = arm_state.get_pos()
 
         # Compute forward kinematics to update joint placements
