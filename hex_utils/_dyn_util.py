@@ -11,11 +11,12 @@ import numpy as np
 import pinocchio as pin
 from typing import Tuple, List
 
+from hex_utils._hex_arm_state import HexArmState
+from hex_utils._hex_cart_pose import HexCartPose
+
 from hex_utils._math_utils import trans2part, part2trans
 from hex_utils._math_utils import trans_inv, trans2se3
 from hex_utils._math_utils import angle_norm
-from hex_utils._hex_arm_state import HexArmState
-from hex_utils._hex_cart_pose import HexCartPose
 
 
 class DynUtil:
@@ -36,11 +37,14 @@ class DynUtil:
         ### gravity vector
         self.__model.gravity.linear = gravity
 
-    def update_gravity(
+    def get_gravity(self) -> np.ndarray:
+        return copy.deepcopy(self.__model.gravity.linear)
+
+    def set_gravity(
             self,
             gravity: np.ndarray = np.array([0, 0, -9.81]),
     ):
-        self.__model.gravity.linear = gravity
+        self.__model.gravity.linear = copy.deepcopy(gravity)
 
     def get_joint_num(self) -> int:
         return self.__joint_num

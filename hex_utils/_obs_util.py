@@ -6,6 +6,7 @@
 # Date  : 2025-05-29
 ################################################################
 
+import copy
 import numpy as np
 
 from hex_utils._hex_arm_state import HexArmState
@@ -13,9 +14,9 @@ from hex_utils._hex_cart_pose import HexCartPose
 from hex_utils._hex_cart_vel import HexCartVel
 from hex_utils._hex_cart_state import HexCartState
 
-from hex_utils._math_utils import quat_slerp, trans_inv
+from hex_utils._math_utils import quat_slerp
 from hex_utils._math_utils import so32quat
-from hex_utils._math_utils import part2se3, se32part, se32trans
+from hex_utils._math_utils import part2se3, se32trans
 
 
 class ObsUtilJoint:
@@ -44,6 +45,30 @@ class ObsUtilJoint:
         ### variables
         self.__ready = False
         self.__obs_state = None
+
+    def get_mass(self) -> np.ndarray:
+        return np.linalg.inv(self.__mass_inv)
+
+    def set_mass(self, mass: np.ndarray):
+        self.__mass_inv = np.linalg.inv(mass)
+
+    def get_damp(self) -> np.ndarray:
+        return copy.deepcopy(self.__damp)
+
+    def set_damp(self, damp: np.ndarray):
+        self.__damp = copy.deepcopy(damp)
+
+    def get_stiff(self) -> np.ndarray:
+        return copy.deepcopy(self.__stiff)
+
+    def set_stiff(self, stiff: np.ndarray):
+        self.__stiff = copy.deepcopy(stiff)
+
+    def get_dt(self) -> float:
+        return self.__dt
+
+    def set_dt(self, dt: float):
+        self.__dt = dt
 
     def is_ready(self) -> bool:
         return self.__ready
@@ -148,6 +173,30 @@ class ObsUtilWork:
         self.__ready = False
         self.__obs_state = None
 
+    def get_mass(self) -> np.ndarray:
+        return np.linalg.inv(self.__mass_inv)
+
+    def set_mass(self, mass: np.ndarray):
+        self.__mass_inv = np.linalg.inv(mass)
+
+    def get_damp(self) -> np.ndarray:
+        return copy.deepcopy(self.__damp)
+
+    def set_damp(self, damp: np.ndarray):
+        self.__damp = copy.deepcopy(damp)
+
+    def get_stiff(self) -> np.ndarray:
+        return copy.deepcopy(self.__stiff)
+
+    def set_stiff(self, stiff: np.ndarray):
+        self.__stiff = copy.deepcopy(stiff)
+
+    def get_dt(self) -> float:
+        return self.__dt
+
+    def set_dt(self, dt: float):
+        self.__dt = dt
+
     def is_ready(self) -> bool:
         return self.__ready
 
@@ -217,7 +266,8 @@ class ObsUtilWork:
                                        self.__vel_limit[3:, 1])
 
         # set state
-        self.__obs_state.set_pose(HexCartPose(se3_next[:3], so32quat(se3_next[3:])))
+        self.__obs_state.set_pose(
+            HexCartPose(se3_next[:3], so32quat(se3_next[3:])))
         self.__obs_state.set_vel(
             HexCartVel(
                 linear=vel_lin_next_in_base,
@@ -245,7 +295,9 @@ class ObsUtilWork:
         obs_weight = 1.0 - update_weight
         pos_new = pos_cur * obs_weight[0] + pos_sensor * update_weight[0]
         quat_new = quat_slerp(quat_cur, quat_sensor, update_weight[1])
-        vel_lin_new = vel_lin_cur * obs_weight[2] + vel_lin_sensor * update_weight[2]
-        vel_ang_new = vel_ang_cur * obs_weight[3] + vel_ang_sensor * update_weight[3]
+        vel_lin_new = vel_lin_cur * obs_weight[
+            2] + vel_lin_sensor * update_weight[2]
+        vel_ang_new = vel_ang_cur * obs_weight[
+            3] + vel_ang_sensor * update_weight[3]
         self.__obs_state.set_pose(HexCartPose(pos_new, quat_new))
         self.__obs_state.set_vel(HexCartVel(vel_lin_new, vel_ang_new))

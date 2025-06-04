@@ -11,6 +11,8 @@ import numpy as np
 
 from hex_utils._hex_stamp import HexStamp
 
+from hex_utils._math_utils import part2se3, part2trans
+
 
 class HexCartPose:
 
@@ -46,6 +48,12 @@ class HexCartPose:
 
     def get_quat(self):
         return copy.deepcopy(self.__quat)
+
+    def get_trans(self):
+        return part2trans(self.__pos, self.__quat)
+
+    def get_se3(self):
+        return part2se3(self.__pos, self.__quat)
 
     def set_pos(self, pos):
         if self.__is_float_array(pos):
