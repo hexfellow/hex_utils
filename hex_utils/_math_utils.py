@@ -66,14 +66,14 @@ def quat_slerp(q1: np.ndarray, q2: np.ndarray, t: float) -> np.ndarray:
 
     # slerp
     if np.fabs(theta) < 1e-6:
-        q = q1 + t * (q2 - q1)
+        q = q1_norm + t * (q2_norm - q1_norm)
         q = q / np.linalg.norm(q)
         return q
 
     sin_theta = np.sin(theta)
     q1_factor = np.sin((1 - t) * theta) / sin_theta
     q2_factor = np.sin(t * theta) / sin_theta
-    q = q1_factor * q1 + q2_factor * q2
+    q = q1_factor * q1_norm + q2_factor * q2_norm
     return q
 
 
