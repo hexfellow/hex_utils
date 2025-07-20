@@ -33,6 +33,8 @@ class DynUtil:
         self.__joint_num = self.__model.njoints - 1
         self.__end_link_id = self.__model.getFrameId(end_effector)
         self.__end_joint_id = self.__joint_num
+        self.__lower_limit = self.__model.lowerPositionLimit
+        self.__upper_limit = self.__model.upperPositionLimit
 
         ### gravity vector
         self.__model.gravity.linear = gravity
@@ -126,8 +128,7 @@ class DynUtil:
         result_flag = False
         for _ in range(max_iter):
             pin.forwardKinematics(self.__model, self.__data, result_joints)
-            trans_end_in_base = self.__data.oMi[
-                self.__end_joint_id].homogeneous
+            trans_end_in_base = self.__data.oMi[self.__end_joint_id].homogeneous
             trans_tar_in_end = trans_base_in_tar @ trans_end_in_base
             err = trans2se3(trans_tar_in_end)
 
@@ -149,6 +150,8 @@ class DynUtil:
                 result_joints,
                 vel * dt,
             )
+            result_joints = np.clip(result_joints, self.__lower_limit,
+                                    self.__upper_limit)
 
         if err_norm < feasible_eps:
             result_flag = True
