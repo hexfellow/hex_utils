@@ -15,8 +15,7 @@ from hex_utils._hex_cart_vel import HexCartVel
 from hex_utils._hex_cart_state import HexCartState
 
 from hex_utils._math_utils import quat_slerp
-from hex_utils._math_utils import so32quat
-from hex_utils._math_utils import part2se3, se32trans
+from hex_utils._math_utils import se32trans, trans2part
 
 
 class ObsUtilJoint:
@@ -152,50 +151,28 @@ class ObsUtilWork:
 
     def __init__(
         self,
-        mass: np.ndarray,
-        damp: np.ndarray,
-        stiff: np.ndarray,
         dt: float,
-        vel_limit: np.ndarray,
-        acc_limit: np.ndarray,
+        vel_limit: np.ndarray = np.array([
+            1.0,  # vel_norm
+            1.0,  # omega_norm
+        ]),
+        acc_limit: np.ndarray = np.array([
+            1.0,  # acc_norm
+            1.0,  # alpha_norm
+        ]),
     ):
         ### physical params
-        self.__mass_inv = np.linalg.inv(mass)
-        self.__damp = damp
-        self.__stiff = stiff
         self.__dt = dt
 
         ### limits
-        self.__vel_limit = vel_limit
-        self.__acc_limit = acc_limit
+        self.__vel_lin_limit = vel_limit[0]
+        self.__vel_ang_limit = vel_limit[1]
+        self.__acc_lin_limit = acc_limit[0]
+        self.__acc_ang_limit = acc_limit[1]
 
         ### variables
         self.__ready = False
         self.__obs_state = None
-
-    def get_mass(self) -> np.ndarray:
-        return np.linalg.inv(self.__mass_inv)
-
-    def set_mass(self, mass: np.ndarray):
-        self.__mass_inv = np.linalg.inv(mass)
-
-    def get_damp(self) -> np.ndarray:
-        return copy.deepcopy(self.__damp)
-
-    def set_damp(self, damp: np.ndarray):
-        self.__damp = copy.deepcopy(damp)
-
-    def get_stiff(self) -> np.ndarray:
-        return copy.deepcopy(self.__stiff)
-
-    def set_stiff(self, stiff: np.ndarray):
-        self.__stiff = copy.deepcopy(stiff)
-
-    def get_dt(self) -> float:
-        return self.__dt
-
-    def set_dt(self, dt: float):
-        self.__dt = dt
 
     def is_ready(self) -> bool:
         return self.__ready
@@ -207,78 +184,62 @@ class ObsUtilWork:
     def get_state(self) -> HexCartState:
         return self.__obs_state
 
-    def __get_se3(self, pose: HexCartPose) -> np.ndarray:
-        pos = pose.get_pos()
-        quat = pose.get_quat()
-        return part2se3(pos, quat)
-
-    def __get_vel(self, vel: HexCartVel) -> np.ndarray:
-        vel_lin = vel.get_linear()
-        vel_ang = vel.get_angular()
-        return np.concatenate((vel_lin, vel_ang))
+    def __norm_limit(self, vec: np.ndarray, limit: float) -> np.ndarray:
+        vec_norm = np.linalg.norm(vec)
+        vec_dir = vec / (vec_norm + 1e-6)
+        vec_norm_limit = np.clip(vec_norm, -limit, limit)
+        return vec_norm_limit * vec_dir
 
     def predict(
         self,
-        state_tar: HexCartState,
+        acc_lin: np.ndarray,
+        acc_ang: np.ndarray,
     ):
-        se3_tar = self.__get_se3(state_tar.get_pose())
-        se3_cur = self.__get_se3(self.__obs_state.get_pose())
-        trans_cur = se32trans(se3_cur)
-        vel_in_base = self.__get_vel(self.__obs_state.get_vel())
-        vel_lin_in_world = trans_cur[:3, :3] @ vel_in_base[:3]
-        vel_ang_in_world = trans_cur[:3, :3] @ vel_in_base[3:]
-        vel_in_world = np.concatenate((vel_lin_in_world, vel_ang_in_world))
+        trans_old_in_world = self.__obs_state.get_pose().get_se3()
+        vel_lin = self.__obs_state.get_vel().get_linear()
+        vel_ang = self.__obs_state.get_vel().get_angular()
+        acc_lin = self.__norm_limit(acc_lin, self.__acc_lin_limit)
+        acc_ang = self.__norm_limit(acc_ang, self.__acc_ang_limit)
 
         # runge-kutta k1
-        vel1 = vel_in_world
-        acc1 = self.__acc(se3_tar - se3_cur, vel_in_world)
+        dse3_1 = np.concatenate((vel_lin, vel_ang))
+        ddse3_1 = np.concatenate((acc_lin, acc_ang))
 
         # runge-kutta k2
-        se32 = se3_cur + vel1 * self.__dt * 0.5
-        vel2 = vel_in_world + acc1 * self.__dt * 0.5
-        acc2 = self.__acc(se3_tar - se32, vel2)
+        dse3_2 = dse3_1 + ddse3_1 * self.__dt * 0.5
+        ddse3_2 = ddse3_1
 
         # runge-kutta k3
-        se33 = se3_cur + vel2 * self.__dt * 0.5
-        vel3 = vel_in_world + acc2 * self.__dt * 0.5
-        acc3 = self.__acc(se3_tar - se33, vel3)
+        dse3_3 = dse3_1 + ddse3_2 * self.__dt * 0.5
+        ddse3_3 = ddse3_1
 
         # runge-kutta k4
-        se34 = se3_cur + vel3 * self.__dt
-        vel4 = vel_in_world + acc3 * self.__dt
-        acc4 = self.__acc(se3_tar - se34, vel4)
+        dse3_4 = dse3_1 + ddse3_3 * self.__dt
+        ddse3_4 = ddse3_1
 
         # runge-kutta
-        se3_next = se3_cur + (vel1 + 2.0 * vel2 + 2.0 * vel3 +
-                              vel4) / 6.0 * self.__dt
-        vel_next = vel_in_world + (acc1 + 2.0 * acc2 + 2.0 * acc3 +
-                                   acc4) / 6.0 * self.__dt
+        se3_delta = (dse3_1 + 2.0 * dse3_2 + 2.0 * dse3_3 +
+                     dse3_4) / 6.0 * self.__dt
+        trans_old_in_new = se32trans(se3_delta)
+        trans_new_in_world = trans_old_in_world @ trans_old_in_new
+        pos_new, quat_new = trans2part(trans_new_in_world)
+        vel_next = dse3_1 + (ddse3_1 + 2.0 * ddse3_2 + 2.0 * ddse3_3 +
+                             ddse3_4) / 6.0 * self.__dt
 
         # clip
-        rot_world_in_base = trans_cur[:3, :3].T
-        vel_lin_next_in_base = rot_world_in_base @ vel_next[:3]
-        vel_ang_next_in_base = rot_world_in_base @ vel_next[3:]
-        vel_lin_next_in_base = np.clip(vel_lin_next_in_base,
-                                       self.__vel_limit[:3, 0],
-                                       self.__vel_limit[:3, 1])
-        vel_ang_next_in_base = np.clip(vel_ang_next_in_base,
-                                       self.__vel_limit[3:, 0],
-                                       self.__vel_limit[3:, 1])
+        vel_lin_next = self.__norm_limit(vel_next[:3], self.__vel_lin_limit)
+        vel_ang_next = self.__norm_limit(vel_next[3:], self.__vel_ang_limit)
 
         # set state
-        self.__obs_state.set_pose(
-            HexCartPose(se3_next[:3], so32quat(se3_next[3:])))
+        self.__obs_state.set_pose(HexCartPose(
+            pos=pos_new,
+            quat=quat_new,
+        ))
         self.__obs_state.set_vel(
             HexCartVel(
-                linear=vel_lin_next_in_base,
-                angular=vel_ang_next_in_base,
+                linear=vel_lin_next,
+                angular=vel_ang_next,
             ))
-
-    def __acc(self, se3_err: np.ndarray, vel_cur: np.ndarray) -> np.ndarray:
-        acc = (self.__stiff @ se3_err -
-               self.__damp @ vel_cur) @ self.__mass_inv
-        acc = np.clip(acc, self.__acc_limit[:, 0], self.__acc_limit[:, 1])
-        return acc
 
     def update(self, state_sensor: HexCartState, update_weight: np.ndarray):
         pose_sensor = state_sensor.get_pose()
