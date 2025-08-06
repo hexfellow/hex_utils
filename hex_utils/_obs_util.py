@@ -133,18 +133,18 @@ class ObsUtilJoint:
         ddq = np.clip(ddq, self.__ddq_limit[:, 0], self.__ddq_limit[:, 1])
         return ddq
 
-    def update(self, state_sensor: HexArmState, update_weight: np.ndarray):
+    def update(self, state_sensor: HexArmState, weight_sensor: np.ndarray):
         q_sensor = np.clip(state_sensor.get_pos(), self.__q_limit[:, 0],
                            self.__q_limit[:, 1])
         dq_sensor = np.clip(state_sensor.get_vel(), self.__dq_limit[:, 0],
                             self.__dq_limit[:, 1])
 
         # update state
-        obs_weight = 1.0 - update_weight
-        self.__obs_state.set_pos(self.__obs_state.get_pos() * obs_weight +
-                                 q_sensor * update_weight)
-        self.__obs_state.set_vel(self.__obs_state.get_vel() * obs_weight +
-                                 dq_sensor * update_weight)
+        weight_intgr = 1.0 - weight_sensor
+        self.__obs_state.set_pos(self.__obs_state.get_pos() * weight_intgr +
+                                 q_sensor * weight_sensor)
+        self.__obs_state.set_vel(self.__obs_state.get_vel() * weight_intgr +
+                                 dq_sensor * weight_sensor)
 
 
 class ObsUtilWork:
@@ -241,7 +241,7 @@ class ObsUtilWork:
                 angular=vel_ang_next,
             ))
 
-    def update(self, state_sensor: HexCartState, update_weight: np.ndarray):
+    def update(self, state_sensor: HexCartState, weight_sensor: np.ndarray):
         pose_sensor = state_sensor.get_pose()
         pose_cur = self.__obs_state.get_pose()
         pos_sensor, quat_sensor = pose_sensor.get_pos(), pose_sensor.get_quat()
@@ -253,12 +253,12 @@ class ObsUtilWork:
         vel_lin_cur, vel_ang_cur = vel_cur.get_linear(), vel_cur.get_angular()
 
         # update state
-        obs_weight = 1.0 - update_weight
-        pos_new = pos_cur * obs_weight[0] + pos_sensor * update_weight[0]
-        quat_new = quat_slerp(quat_cur, quat_sensor, update_weight[1])
-        vel_lin_new = vel_lin_cur * obs_weight[
-            2] + vel_lin_sensor * update_weight[2]
-        vel_ang_new = vel_ang_cur * obs_weight[
-            3] + vel_ang_sensor * update_weight[3]
+        weight_intgr = 1.0 - weight_sensor
+        pos_new = pos_cur * weight_intgr[0] + pos_sensor * weight_sensor[0]
+        quat_new = quat_slerp(quat_cur, quat_sensor, weight_sensor[1])
+        vel_lin_new = vel_lin_cur * weight_intgr[
+            2] + vel_lin_sensor * weight_sensor[2]
+        vel_ang_new = vel_ang_cur * weight_intgr[
+            3] + vel_ang_sensor * weight_sensor[3]
         self.__obs_state.set_pose(HexCartPose(pos_new, quat_new))
         self.__obs_state.set_vel(HexCartVel(vel_lin_new, vel_ang_new))
