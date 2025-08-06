@@ -1,3 +1,0 @@
-opencv-python>=4.2
-open3d>=0.18.0
-pin==3.4.0

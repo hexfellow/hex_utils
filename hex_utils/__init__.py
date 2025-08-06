@@ -6,8 +6,7 @@
 # Date  : 2025-01-14
 ################################################################
 
-__version__ = "0.1.8"
-
+# hex_struct
 from ._hex_stamp import HexStamp
 from ._hex_arm_ctrl import HexArmCtrl, HexArmCtrlStamped
 from ._hex_arm_state import HexArmState, HexArmStateStamped

@@ -4,14 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hex_utils"
-dynamic = ["version", "dependencies"]
+version = "0.1.8"
+dependencies = [
+  "opencv-python>=4.2",
+  "open3d>=0.18.0",
+  "pin==3.4.0",
+]
 requires-python = ">=3.8"
 authors = [
-  { name="Dong Zhaorui", email="847235539@qq.com" },
+  { name="Dong Zhaorui", email="joray.dong@hexfellow.com" },
 ]
 maintainers = [
-  { name="jecjune", email="jecjune@qq.com" },
-  { name="Dong Zhaorui", email="847235539@qq.com" },
+  { name="jecjune", email="zejun.chen@hexfellow.com" },
+  { name="Dong Zhaorui", email="joray.dong@hexfellow.com" },
 ]
 description = "HEXFELLOW Utilities"
 readme = "README.md"
@@ -21,7 +26,3 @@ classifiers = [
     "Operating System :: OS Independent",
     "License :: OSI Approved :: Apache-2.0 license"
 ]
-
-[tool.setuptools.dynamic]
-version = {attr = "hex_utils.__version__"}
-dependencies = {file = "requirements.txt"}
