@@ -195,7 +195,7 @@ class ObsUtilWork:
         acc_lin: np.ndarray,
         acc_ang: np.ndarray,
     ):
-        trans_old_in_world = self.__obs_state.get_pose().get_se3()
+        trans_old_in_world = self.__obs_state.get_pose().get_trans()
         vel_lin = self.__obs_state.get_vel().get_linear()
         vel_ang = self.__obs_state.get_vel().get_angular()
         acc_lin = self.__norm_limit(acc_lin, self.__acc_lin_limit)
