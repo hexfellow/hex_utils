@@ -3,19 +3,16 @@
 ################################################################
 # Copyright 2025 Dong Zhaorui. All rights reserved.
 # Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2025-05-29
+# Date  : 2025-09-18
 ################################################################
 
 import copy
 import numpy as np
+from typing import Tuple
 
-from hex_utils._hex_arm_state import HexArmState
-from hex_utils._hex_cart_pose import HexCartPose
-from hex_utils._hex_cart_vel import HexCartVel
-from hex_utils._hex_cart_state import HexCartState
-
-from hex_utils._math_utils import quat_slerp
-from hex_utils._math_utils import se32trans, trans2part
+from hex_utils.math_utils import quat_slerp
+from hex_utils.math_utils import se32trans
+from hex_utils.math_utils import trans2part, part2trans
 
 
 class ObsUtilJoint:
@@ -43,7 +40,8 @@ class ObsUtilJoint:
 
         ### variables
         self.__ready = False
-        self.__obs_state = None
+        self.__obs_q = None
+        self.__obs_dq = None
 
     def get_mass(self) -> np.ndarray:
         return np.linalg.inv(self.__mass_inv)
@@ -72,20 +70,20 @@ class ObsUtilJoint:
     def is_ready(self) -> bool:
         return self.__ready
 
-    def set_state(self, state: HexArmState):
-        self.__obs_state = state
+    def set_state(self, q: np.ndarray, dq: np.ndarray):
+        self.__obs_q = q
+        self.__obs_dq = dq
         self.__ready = True
 
-    def get_state(self) -> HexArmState:
-        return self.__obs_state
+    def get_state(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.__obs_q, self.__obs_dq
 
     def predict(
         self,
-        state_tar: HexArmState,
+        q_tar: np.ndarray,
     ):
-        q_tar = state_tar.get_pos()
-        q_cur = self.__obs_state.get_pos()
-        dq_cur = self.__obs_state.get_vel()
+        q_cur = self.__obs_q
+        dq_cur = self.__obs_dq
 
         # runge-kutta k1
         dq1 = dq_cur
@@ -125,26 +123,33 @@ class ObsUtilJoint:
         )
 
         # set state
-        self.__obs_state.set_pos(q_next)
-        self.__obs_state.set_vel(dq_next)
+        self.__obs_q = q_next
+        self.__obs_dq = dq_next
 
-    def __ddq(self, q_err: np.ndarray, dq_cur: np.ndarray) -> np.ndarray:
+    def __ddq(
+        self,
+        q_err: np.ndarray,
+        dq_cur: np.ndarray,
+    ) -> np.ndarray:
         ddq = (self.__stiff @ q_err - self.__damp @ dq_cur) @ self.__mass_inv
         ddq = np.clip(ddq, self.__ddq_limit[:, 0], self.__ddq_limit[:, 1])
         return ddq
 
-    def update(self, state_sensor: HexArmState, weight_sensor: np.ndarray):
-        q_sensor = np.clip(state_sensor.get_pos(), self.__q_limit[:, 0],
-                           self.__q_limit[:, 1])
-        dq_sensor = np.clip(state_sensor.get_vel(), self.__dq_limit[:, 0],
+    def update(
+        self,
+        q_sensor: np.ndarray,
+        dq_sensor: np.ndarray,
+        weight_sensor: np.ndarray,
+    ):
+        q_sensor = np.clip(q_sensor, self.__q_limit[:, 0], self.__q_limit[:,
+                                                                          1])
+        dq_sensor = np.clip(dq_sensor, self.__dq_limit[:, 0],
                             self.__dq_limit[:, 1])
 
         # update state
         weight_intgr = 1.0 - weight_sensor
-        self.__obs_state.set_pos(self.__obs_state.get_pos() * weight_intgr +
-                                 q_sensor * weight_sensor)
-        self.__obs_state.set_vel(self.__obs_state.get_vel() * weight_intgr +
-                                 dq_sensor * weight_sensor)
+        self.__obs_q = self.__obs_q * weight_intgr + q_sensor * weight_sensor
+        self.__obs_dq = self.__obs_dq * weight_intgr + dq_sensor * weight_sensor
 
 
 class ObsUtilWork:
@@ -172,17 +177,19 @@ class ObsUtilWork:
 
         ### variables
         self.__ready = False
-        self.__obs_state = None
+        self.__obs_pose = None
+        self.__obs_vel = None
 
     def is_ready(self) -> bool:
         return self.__ready
 
-    def set_state(self, state: HexCartState):
-        self.__obs_state = state
+    def set_state(self, pose: np.ndarray, vel: np.ndarray):
+        self.__obs_pose = pose
+        self.__obs_vel = vel
         self.__ready = True
 
-    def get_state(self) -> HexCartState:
-        return self.__obs_state
+    def get_state(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.__obs_pose, self.__obs_vel
 
     def __norm_limit(self, vec: np.ndarray, limit: float) -> np.ndarray:
         vec_norm = np.linalg.norm(vec)
@@ -195,9 +202,10 @@ class ObsUtilWork:
         acc_lin: np.ndarray,
         acc_ang: np.ndarray,
     ):
-        trans_old_in_world = self.__obs_state.get_pose().get_trans()
-        vel_lin = self.__obs_state.get_vel().get_linear()
-        vel_ang = self.__obs_state.get_vel().get_angular()
+        trans_old_in_world = part2trans(self.__obs_pose[:3],
+                                        self.__obs_pose[3:])
+        vel_lin = self.__obs_vel[:3]
+        vel_ang = self.__obs_vel[3:]
         acc_lin = self.__norm_limit(acc_lin, self.__acc_lin_limit)
         acc_ang = self.__norm_limit(acc_ang, self.__acc_ang_limit)
 
@@ -231,26 +239,19 @@ class ObsUtilWork:
         vel_ang_next = self.__norm_limit(vel_next[3:], self.__vel_ang_limit)
 
         # set state
-        self.__obs_state.set_pose(HexCartPose(
-            pos=pos_new,
-            quat=quat_new,
-        ))
-        self.__obs_state.set_vel(
-            HexCartVel(
-                linear=vel_lin_next,
-                angular=vel_ang_next,
-            ))
+        self.__obs_pose = np.concatenate((pos_new, quat_new))
+        self.__obs_vel = np.concatenate((vel_lin_next, vel_ang_next))
 
-    def update(self, state_sensor: HexCartState, weight_sensor: np.ndarray):
-        pose_sensor = state_sensor.get_pose()
-        pose_cur = self.__obs_state.get_pose()
-        pos_sensor, quat_sensor = pose_sensor.get_pos(), pose_sensor.get_quat()
-        pos_cur, quat_cur = pose_cur.get_pos(), pose_cur.get_quat()
-        vel_sensor = state_sensor.get_vel()
-        vel_cur = self.__obs_state.get_vel()
-        vel_lin_sensor, vel_ang_sensor = vel_sensor.get_linear(
-        ), vel_sensor.get_angular()
-        vel_lin_cur, vel_ang_cur = vel_cur.get_linear(), vel_cur.get_angular()
+    def update(
+        self,
+        pose_sensor: np.ndarray,
+        vel_sensor: np.ndarray,
+        weight_sensor: np.ndarray,
+    ):
+        pos_sensor, quat_sensor = pose_sensor[:3], pose_sensor[3:]
+        pos_cur, quat_cur = self.__obs_pose[:3], self.__obs_pose[3:]
+        vel_lin_sensor, vel_ang_sensor = vel_sensor[:3], vel_sensor[3:]
+        vel_lin_cur, vel_ang_cur = self.__obs_vel[:3], self.__obs_vel[3:]
 
         # update state
         weight_intgr = 1.0 - weight_sensor
@@ -260,5 +261,5 @@ class ObsUtilWork:
             2] + vel_lin_sensor * weight_sensor[2]
         vel_ang_new = vel_ang_cur * weight_intgr[
             3] + vel_ang_sensor * weight_sensor[3]
-        self.__obs_state.set_pose(HexCartPose(pos_new, quat_new))
-        self.__obs_state.set_vel(HexCartVel(vel_lin_new, vel_ang_new))
+        self.__obs_pose = np.concatenate((pos_new, quat_new))
+        self.__obs_vel = np.concatenate((vel_lin_new, vel_ang_new))

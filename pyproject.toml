@@ -6,8 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "hex_utils"
 version = "0.1.8"
 dependencies = [
-  "opencv-python>=4.2",
-  "open3d>=0.18.0",
+  "numpy>=2.2.6",
   "pin==3.4.0",
 ]
 requires-python = ">=3.8"

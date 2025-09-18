@@ -5,17 +5,26 @@
 # Date  : 2025-05-26
 ################################################################
 
-CUR_DIR=$(pwd)
-SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}); pwd)
+CUR_DIR="$(pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "CUR_DIR: $CUR_DIR"
 echo "SCRIPT_DIR: $SCRIPT_DIR"
 
 cd $SCRIPT_DIR
 
-rm -rf dist
-python3 -m build
-pip3 uninstall hex_utils -y
-pip3 install dist/hex_utils-*-py3-none-any.whl
-rm -rf dist
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Error: uv not found. Please install uv first." >&2
+  exit 1
+fi
+
+if [ ! -d .venv ]; then
+  uv venv --python 3.11
+fi
+source .venv/bin/activate
+
+# Install hex_utils
+rm -rf dist build *.egg-info
+uv pip uninstall hex_utils || true
+uv pip install -e .
 
 cd $CUR_DIR
