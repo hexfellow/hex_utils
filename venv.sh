@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
+set -Eeuo pipefail
 ################################################################
 # Copyright 2025 Dong Zhaorui. All rights reserved.
 # Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2025-05-26
+# Date  : 2025-09-28
 ################################################################
 
 CUR_DIR="$(pwd)"

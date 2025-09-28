@@ -1,27 +1,37 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hex_utils"
+name = "hex_robo_utils"
 version = "0.1.8"
-dependencies = [
-  "numpy>=2.2.6",
-  "pin==3.4.0",
-]
-requires-python = ">=3.8"
-authors = [
-  { name="Dong Zhaorui", email="joray.dong@hexfellow.com" },
-]
-maintainers = [
-  { name="jecjune", email="zejun.chen@hexfellow.com" },
-  { name="Dong Zhaorui", email="joray.dong@hexfellow.com" },
-]
 description = "HEXFELLOW Utilities"
 readme = "README.md"
-license = { file = "LICENSE" }
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-    "License :: OSI Approved :: Apache-2.0 license"
+license = "Apache-2.0"
+authors = [{ name = "Dong Zhaorui", email = "joray.dong@hexfellow.com" }]
+maintainers = [
+  { name = "jecjune", email = "zejun.chen@hexfellow.com" },
+  { name = "Dong Zhaorui", email = "joray.dong@hexfellow.com" },
 ]
+keywords = ["hex_robo_utils"]
+requires-python = ">=3.8"
+dependencies = ["numpy>=2.2.6", "pin==3.4.0"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: POSIX :: Linux",
+]
+
+[project.urls]
+Homepage = "https://github.com/hexfellow/hex_utils"
+Repository = "https://github.com/hexfellow/hex_utils.git"
+"Bug Tracker" = "https://github.com/hexfellow/hex_utils/issues"
+Documentation = "https://github.com/hexfellow/hex_utils/wiki"
