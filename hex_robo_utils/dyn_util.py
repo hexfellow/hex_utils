@@ -10,9 +10,9 @@ import numpy as np
 import pinocchio as pin
 from typing import Tuple, List
 
-from hex_utils.math_utils import trans2part, part2trans
-from hex_utils.math_utils import trans_inv, trans2se3
-from hex_utils.math_utils import angle_norm
+from hex_robo_utils.math_utils import trans2part, part2trans
+from hex_robo_utils.math_utils import trans_inv, trans2se3
+from hex_robo_utils.math_utils import angle_norm
 
 
 class DynUtil:

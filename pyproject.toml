@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hex_robo_utils"
-version = "0.1.8"
-description = "HEXFELLOW Utilities"
+version = "0.1.9"
+description = "HEXFELLOW Robotics Utilities"
 readme = "README.md"
 license = "Apache-2.0"
 authors = [{ name = "Dong Zhaorui", email = "joray.dong@hexfellow.com" }]

@@ -10,9 +10,9 @@ import copy
 import numpy as np
 from typing import Tuple
 
-from hex_utils.math_utils import quat_slerp
-from hex_utils.math_utils import se32trans
-from hex_utils.math_utils import trans2part, part2trans
+from hex_robo_utils.math_utils import quat_slerp
+from hex_robo_utils.math_utils import se32trans
+from hex_robo_utils.math_utils import trans2part, part2trans
 
 
 class ObsUtilJoint:

@@ -23,9 +23,9 @@ if [ ! -d .venv ]; then
 fi
 source .venv/bin/activate
 
-# Install hex_utils
+# Install hex_robo_utils
 rm -rf dist build *.egg-info
-uv pip uninstall hex_utils || true
+uv pip uninstall hex_robo_utils || true
 uv pip install -e .
 
 cd $CUR_DIR

@@ -1,3 +1,3 @@
-# **hex_utils**
+# **hex_robo_utils**
 
 coming soon ...
