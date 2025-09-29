@@ -10,6 +10,8 @@
 from .dyn_util import DynUtil
 from .obs_util import ObsUtilJoint
 from .obs_util import ObsUtilWork
+from .hex_hdf5_reader import HexHdf5Reader
+from .hex_hdf5_writer import HexHdf5Writer
 
 # basic
 from .math_utils import hat
@@ -58,6 +60,8 @@ __all__ = [
     'DynUtil',
     'ObsUtilJoint',
     'ObsUtilWork',
+    'HexHdf5Reader',
+    'HexHdf5Writer',
 
     # math basic
     'hat',
