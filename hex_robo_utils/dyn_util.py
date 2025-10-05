@@ -5,6 +5,7 @@
 # Author: Dong Zhaorui 847235539@qq.com
 # Date  : 2025-09-18
 ################################################################
+
 import copy
 import numpy as np
 import pinocchio as pin
@@ -20,17 +21,20 @@ class DynUtil:
     def __init__(
             self,
             model_path: str,
-            end_effector: str,
+            last_link: str,
+            end_pose: np.ndarray = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
             gravity: np.ndarray = np.array([0, 0, -9.81]),
     ):
         ### pinocchio init
         self.__model = pin.buildModelFromUrdf(model_path)
         self.__data = self.__model.createData()
         self.__joint_num = self.__model.njoints - 1
-        self.__end_link_id = self.__model.getFrameId(end_effector)
+        self.__end_link_id = self.__model.getFrameId(last_link)
         self.__end_joint_id = self.__joint_num
         self.__lower_limit = self.__model.lowerPositionLimit
         self.__upper_limit = self.__model.upperPositionLimit
+        self.__trans_end_in_last = part2trans(end_pose[:3], end_pose[3:])
+        self.__trans_last_in_end = trans_inv(self.__trans_end_in_last)
 
         ### gravity vector
         self.__model.gravity.linear = gravity
@@ -95,13 +99,16 @@ class DynUtil:
         pin.forwardKinematics(self.__model, self.__data, q)
 
         # Collect the poses of all joints
-        joint_poses = []
+        poses = []
+        trans = None
         for i in range(self.__joint_num):
             trans = self.__data.oMi[i + 1].homogeneous
             pos, quat = trans2part(trans)
-            joint_poses.append((pos, quat))
-
-        return joint_poses
+            poses.append((pos, quat))
+        trans_end_in_base = trans @ self.__trans_end_in_last
+        pos, quat = trans2part(trans_end_in_base)
+        poses.append((pos, quat))
+        return poses
 
     def inverse_kinematics(
         self,
@@ -114,11 +121,12 @@ class DynUtil:
         max_iter: int = 300,
     ) -> Tuple[bool, np.ndarray, float]:
         result_q = copy.deepcopy(start_q)
-        trans_tar_in_base = copy.deepcopy(
+        trans_end_tar_in_base = copy.deepcopy(
             part2trans(
                 tar_pose[0],
                 tar_pose[1],
             ))
+        trans_tar_in_base = trans_end_tar_in_base @ self.__trans_last_in_end
         trans_base_in_tar = trans_inv(trans_tar_in_base)
 
         # inverse kinematics
