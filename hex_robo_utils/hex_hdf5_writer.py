@@ -3,7 +3,7 @@
 ################################################################
 # Copyright 2025 Dong Zhaorui. All rights reserved.
 # Author: Dong Zhaorui 847235539@qq.com
-# Date  : 2025-09-19
+# Date  : 2025-10-11
 ################################################################
 
 import time
@@ -51,7 +51,8 @@ class HexHdf5Writer:
 
     def stop(self):
         self.__stop_event.set()
-        self.__writer_thread.join(timeout=2)
+        self.__writer_thread.join()
+        self.summary()
         if self.__hdf5_file is not None:
             try:
                 self.__hdf5_file.flush()
