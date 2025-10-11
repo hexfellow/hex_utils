@@ -91,24 +91,28 @@ class HexHdf5Reader:
         group_name: str,
         index: int,
         dataset_name: str = "data",
+        use_ns: bool = False,
     ):
         return self.get_batch_data(
             group_name=group_name,
             start_index=index,
             end_index=index + 1,
             dataset_name=dataset_name,
+            use_ns=use_ns,
         )[0]
 
     def get_all_data(
         self,
         group_name: str,
         dataset_name: str = "data",
+        use_ns: bool = False,
     ):
         return self.get_batch_data(
             group_name=group_name,
             start_index=0,
             end_index=None,
             dataset_name=dataset_name,
+            use_ns=use_ns,
         )
 
     def get_batch_data(
@@ -117,6 +121,7 @@ class HexHdf5Reader:
         start_index: int,
         end_index: int = None,
         dataset_name: str = "data",
+        use_ns: bool = False,
     ):
         dataset = self.__get_dataset_handle(group_name, dataset_name)
 
@@ -138,10 +143,13 @@ class HexHdf5Reader:
                 raise ValueError(
                     f"Dataset {group_name}/{dataset_name} is not a timestamp dataset (expected shape[1:] = (1,), got {data.shape[1:]})"
                 )
-            ts_list = []
-            for ts_ns in data.reshape(-1):
-                ts_list.append(self.__ns_to_hex_ts(int(ts_ns)))
-            return ts_list
+            if not use_ns:
+                ts_list = []
+                for ts_ns in data.reshape(-1):
+                    ts_list.append(self.__ns_to_hex_ts(int(ts_ns)))
+                return ts_list
+            else:
+                return data.reshape(-1)
         return data
 
     def __ns_to_hex_ts(self, ts: int):
