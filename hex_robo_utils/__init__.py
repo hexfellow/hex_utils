@@ -7,11 +7,13 @@
 ################################################################
 
 # utils
-from .dyn_util import DynUtil
-from .obs_util import ObsUtilJoint
-from .obs_util import ObsUtilWork
-from .hex_hdf5_reader import HexHdf5Reader
-from .hex_hdf5_writer import HexHdf5Writer
+from .dyn_util import HexDynUtil
+from .obs_util import HexObsUtilJoint
+from .obs_util import HexObsUtilWork
+from .ctrl_util import HexCtrlUtilMit
+from .ctrl_util import HexCtrlUtilPid
+from .hdf5_reader import HexHdf5Reader
+from .hdf5_writer import HexHdf5Writer
 
 # basic
 from .math_utils import hat
@@ -57,9 +59,11 @@ __all__ = [
     '__version__',
 
     # utils
-    'DynUtil',
-    'ObsUtilJoint',
-    'ObsUtilWork',
+    'HexDynUtil',
+    'HexObsUtilJoint',
+    'HexObsUtilWork',
+    'HexCtrlUtilMit',
+    'HexCtrlUtilPid',
     'HexHdf5Reader',
     'HexHdf5Writer',
 

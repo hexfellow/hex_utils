@@ -15,7 +15,7 @@ from hex_robo_utils.math_utils import se32trans
 from hex_robo_utils.math_utils import trans2part, part2trans
 
 
-class ObsUtilJoint:
+class HexObsUtilJoint:
 
     def __init__(
         self,
@@ -152,7 +152,7 @@ class ObsUtilJoint:
         self.__obs_dq = self.__obs_dq * weight_intgr + dq_sensor * weight_sensor
 
 
-class ObsUtilWork:
+class HexObsUtilWork:
 
     def __init__(
         self,

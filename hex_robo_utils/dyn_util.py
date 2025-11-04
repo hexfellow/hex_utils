@@ -16,7 +16,7 @@ from hex_robo_utils.math_utils import trans_inv, trans2se3
 from hex_robo_utils.math_utils import angle_norm
 
 
-class DynUtil:
+class HexDynUtil:
 
     def __init__(
             self,
