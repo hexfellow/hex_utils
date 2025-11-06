@@ -22,7 +22,8 @@ class HexDynUtil:
             self,
             model_path: str,
             last_link: str,
-            end_pose: np.ndarray = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
+            end_pose: np.ndarray = np.array(
+                [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
             gravity: np.ndarray = np.array([0, 0, -9.81]),
     ):
         ### pinocchio init
@@ -174,3 +175,31 @@ class HexDynUtil:
             result_flag = True
 
         return result_flag, result_q, err_norm
+
+
+class HexFricUtil:
+
+    def __init__(
+            self,
+            fc: np.ndarray = np.array([10.0] * 6),
+            k: np.ndarray = np.array([1.0] * 6),
+            fv: np.ndarray = np.array([25.0] * 6),
+            fo: np.ndarray = np.array([3.0] * 6),
+    ):
+        # constants
+        self.__fc = fc.copy()
+        self.__k = k.copy()
+        self.__fv = fv.copy()
+        self.__fo = fo.copy()
+
+    def __call__(self, dq: np.ndarray, tar_dir: np.ndarray):
+        tau_c = self.__fc * np.tanh(self.__k * dq)
+        tau_v = self.__fv * dq
+        tau_o = self.__fo * np.sign(dq)
+        tau_f = tau_c + tau_v + tau_o
+
+        # static friction
+        static_mask = np.fabs(dq) < 1e-3
+        tau_f[static_mask] = self.__fo[static_mask] * np.sign(
+            tar_dir[static_mask])
+        return tau_f

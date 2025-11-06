@@ -8,8 +8,9 @@
 
 # utils
 from .dyn_util import HexDynUtil
+from .dyn_util import HexFricUtil
 from .obs_util import HexObsUtilJoint
-from .obs_util import HexObsUtilWork
+from .obs_util import HexObsUtilDisturbance
 from .ctrl_util import HexCtrlUtilMit
 from .ctrl_util import HexCtrlUtilPid
 from .hdf5_reader import HexHdf5Reader
@@ -60,8 +61,9 @@ __all__ = [
 
     # utils
     'HexDynUtil',
+    'HexFricUtil',
     'HexObsUtilJoint',
-    'HexObsUtilWork',
+    'HexObsUtilDisturbance',
     'HexCtrlUtilMit',
     'HexCtrlUtilPid',
     'HexHdf5Reader',

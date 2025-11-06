@@ -10,10 +10,6 @@ import copy
 import numpy as np
 from typing import Tuple
 
-from hex_robo_utils.math_utils import quat_slerp
-from hex_robo_utils.math_utils import se32trans
-from hex_robo_utils.math_utils import trans2part, part2trans
-
 
 class HexObsUtilJoint:
 
@@ -152,114 +148,60 @@ class HexObsUtilJoint:
         self.__obs_dq = self.__obs_dq * weight_intgr + dq_sensor * weight_sensor
 
 
-class HexObsUtilWork:
+class HexObsUtilDisturbance:
 
     def __init__(
-        self,
-        dt: float,
-        vel_limit: np.ndarray = np.array([
-            1.0,  # vel_norm
-            1.0,  # omega_norm
-        ]),
-        acc_limit: np.ndarray = np.array([
-            1.0,  # acc_norm
-            1.0,  # alpha_norm
-        ]),
+            self,
+            dt: float = 4e-3,
+            fc: np.ndarray = np.array([10.0] * 6),
+            fa: np.ndarray = np.array([25.0] * 6),
+            dis_limit: np.ndarray = np.array([3.0] * 6),
     ):
-        ### physical params
-        self.__dt = dt
-
         ### limits
-        self.__vel_lin_limit = vel_limit[0]
-        self.__vel_ang_limit = vel_limit[1]
-        self.__acc_lin_limit = acc_limit[0]
-        self.__acc_ang_limit = acc_limit[1]
+        self.__dis_upper = dis_limit.copy()
+        self.__dis_lower = -dis_limit.copy()
+
+        ### constants
+        self.__dt = dt
+        self.__alpha_q = np.exp(-2.0 * np.pi * fc * dt)
+        self.__alpha_a = np.exp(-2.0 * np.pi * fa * dt)
 
         ### variables
         self.__ready = False
-        self.__obs_pose = None
-        self.__obs_vel = None
+        self.__dof = dis_limit.shape[0]
+        self.__ddq_hat = np.zeros(self.__dof)
+        self.__dis_hat = np.zeros(self.__dof)
+        self.__last_cmd = np.zeros(self.__dof)
+        self.__last_fric = np.zeros(self.__dof)
 
-    def is_ready(self) -> bool:
+    def ready(self):
         return self.__ready
 
-    def set_state(self, pose: np.ndarray, vel: np.ndarray):
-        self.__obs_pose = pose
-        self.__obs_vel = vel
+    def set_last(self, cmd: np.ndarray, fric: np.ndarray):
+        self.__last_cmd = cmd.copy()
+        self.__last_fric = fric.copy()
         self.__ready = True
 
-    def get_state(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.__obs_pose, self.__obs_vel
-
-    def __norm_limit(self, vec: np.ndarray, limit: float) -> np.ndarray:
-        vec_norm = np.linalg.norm(vec)
-        vec_dir = vec / (vec_norm + 1e-6)
-        vec_norm_limit = np.clip(vec_norm, -limit, limit)
-        return vec_norm_limit * vec_dir
-
-    def predict(
+    def __call__(
         self,
-        acc_lin: np.ndarray,
-        acc_ang: np.ndarray,
+        dq: np.ndarray,
+        ddq_raw: np.ndarray,
+        m_mat: np.ndarray,
+        c_mat: np.ndarray,
+        g_vec: np.ndarray,
     ):
-        trans_old_in_world = part2trans(self.__obs_pose[:3],
-                                        self.__obs_pose[3:])
-        vel_lin = self.__obs_vel[:3]
-        vel_ang = self.__obs_vel[3:]
-        acc_lin = self.__norm_limit(acc_lin, self.__acc_lin_limit)
-        acc_ang = self.__norm_limit(acc_ang, self.__acc_ang_limit)
+        # acc estimate
+        self.__ddq_hat = self.__alpha_a * self.__ddq_hat + (
+            1 - self.__alpha_a) * ddq_raw
 
-        # runge-kutta k1
-        dse3_1 = np.concatenate((vel_lin, vel_ang))
-        ddse3_1 = np.concatenate((acc_lin, acc_ang))
+        # nominal dynamics
+        tau_model = m_mat @ self.__ddq_hat + c_mat @ dq + g_vec
 
-        # runge-kutta k2
-        dse3_2 = dse3_1 + ddse3_1 * self.__dt * 0.5
-        ddse3_2 = ddse3_1
+        # raw disturbance calculation
+        dis_raw = self.__last_cmd - tau_model - self.__last_fric
+        self.__dis_hat = self.__alpha_q * self.__dis_hat + (
+            1 - self.__alpha_q) * dis_raw
+        self.__dis_hat = np.clip(self.__dis_hat, self.__dis_lower,
+                                 self.__dis_upper)
 
-        # runge-kutta k3
-        dse3_3 = dse3_1 + ddse3_2 * self.__dt * 0.5
-        ddse3_3 = ddse3_1
-
-        # runge-kutta k4
-        dse3_4 = dse3_1 + ddse3_3 * self.__dt
-        ddse3_4 = ddse3_1
-
-        # runge-kutta
-        se3_delta = (dse3_1 + 2.0 * dse3_2 + 2.0 * dse3_3 +
-                     dse3_4) / 6.0 * self.__dt
-        trans_old_in_new = se32trans(se3_delta)
-        trans_new_in_world = trans_old_in_world @ trans_old_in_new
-        pos_new, quat_new = trans2part(trans_new_in_world)
-        vel_next = dse3_1 + (ddse3_1 + 2.0 * ddse3_2 + 2.0 * ddse3_3 +
-                             ddse3_4) / 6.0 * self.__dt
-
-        # clip
-        vel_lin_next = self.__norm_limit(vel_next[:3], self.__vel_lin_limit)
-        vel_ang_next = self.__norm_limit(vel_next[3:], self.__vel_ang_limit)
-
-        # set state
-        self.__obs_pose = np.concatenate((pos_new, quat_new))
-        self.__obs_vel = np.concatenate((vel_lin_next, vel_ang_next))
-
-    def update(
-        self,
-        pose_sensor: np.ndarray,
-        vel_sensor: np.ndarray,
-        weight_sensor: np.ndarray,
-    ):
-        pos_sensor, quat_sensor = pose_sensor[:3], pose_sensor[3:]
-        pos_cur, quat_cur = self.__obs_pose[:3], self.__obs_pose[3:]
-        vel_lin_sensor, vel_ang_sensor = vel_sensor[:3], vel_sensor[3:]
-        vel_lin_cur, vel_ang_cur = self.__obs_vel[:3], self.__obs_vel[3:]
-
-        # update state
-        weight_intgr = 1.0 - weight_sensor
-        pos_new = pos_cur * weight_intgr[0] + pos_sensor * weight_sensor[0]
-        quat_new = quat_slerp(quat_cur, quat_sensor, weight_sensor[1])
-        vel_lin_new = vel_lin_cur * weight_intgr[
-            2] + vel_lin_sensor * weight_sensor[2]
-        vel_ang_new = vel_ang_cur * weight_intgr[
-            3] + vel_ang_sensor * weight_sensor[3]
-        self.__obs_pose = np.concatenate((pos_new, quat_new))
-        self.__obs_vel = np.concatenate((vel_lin_new, vel_ang_new))
+        return self.__dis_hat
