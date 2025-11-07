@@ -178,13 +178,14 @@ class HexDynUtil:
 
 
 class HexFricUtil:
-
+    # tanh-based friction model
+    # tau_f = fc * tanh(k * dq) + fv * dq + fo
     def __init__(
             self,
-            fc: np.ndarray = np.array([10.0] * 6),
-            k: np.ndarray = np.array([1.0] * 6),
-            fv: np.ndarray = np.array([25.0] * 6),
-            fo: np.ndarray = np.array([3.0] * 6),
+            fc: np.ndarray = np.array([1.0] * 6),
+            k: np.ndarray = np.array([100.0] * 6),
+            fv: np.ndarray = np.array([1.0] * 6),
+            fo: np.ndarray = np.array([0.0] * 6),
     ):
         # constants
         self.__fc = fc.copy()
@@ -192,14 +193,9 @@ class HexFricUtil:
         self.__fv = fv.copy()
         self.__fo = fo.copy()
 
-    def __call__(self, dq: np.ndarray, tar_dir: np.ndarray):
+    def __call__(self, dq: np.ndarray):
         tau_c = self.__fc * np.tanh(self.__k * dq)
         tau_v = self.__fv * dq
-        tau_o = self.__fo * np.sign(dq)
+        tau_o = self.__fo
         tau_f = tau_c + tau_v + tau_o
-
-        # static friction
-        static_mask = np.fabs(dq) < 1e-3
-        tau_f[static_mask] = self.__fo[static_mask] * np.sign(
-            tar_dir[static_mask])
         return tau_f
