@@ -13,6 +13,7 @@ from .obs_util import HexObsUtilJoint
 from .obs_util import HexObsUtilDisturbance
 from .ctrl_util import HexCtrlUtilMit
 from .ctrl_util import HexCtrlUtilPid
+from .ctrl_util import HexCtrlUtilInt
 from .hdf5_reader import HexHdf5Reader
 from .hdf5_writer import HexHdf5Writer
 
@@ -66,6 +67,7 @@ __all__ = [
     'HexObsUtilDisturbance',
     'HexCtrlUtilMit',
     'HexCtrlUtilPid',
+    'HexCtrlUtilInt',
     'HexHdf5Reader',
     'HexHdf5Writer',
 

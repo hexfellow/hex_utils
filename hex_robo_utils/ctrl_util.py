@@ -68,3 +68,42 @@ class HexCtrlUtilPid:
         self.__last_q_err = q_err
         self.__last_dq_err = dq_err
         return tau_ctrl + tau_comp
+
+
+class HexCtrlUtilInt:
+
+    def __init__(
+        self,
+        ki,
+        dt,
+        limit=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+        near_ratio=0.5,
+        near_threshold=1e-1,
+    ):
+        # constants
+        self.__ki = ki.copy()
+        self.__dt = dt
+        self.__limit_upper = np.array(
+            [limit.copy(), limit.copy() * near_ratio])
+        self.__limit_lower = np.array(
+            [-limit.copy(), -limit.copy() * near_ratio])
+        self.__near_threshold = near_threshold
+
+        # variables
+        self.__i_term = np.zeros(limit.shape[0])
+
+    def __call__(self, cur_q, tar_q):
+        err = tar_q - cur_q
+        self.__i_term += self.__ki * err * self.__dt
+
+        # limit idx
+        col = np.arange(err.shape[0])
+        row = (np.fabs(err) < self.__near_threshold).astype(int)
+
+        # i_term limit
+        self.__i_term = np.clip(
+            self.__i_term,
+            self.__limit_lower[row, col],
+            self.__limit_upper[row, col],
+        )
+        return self.__i_term
