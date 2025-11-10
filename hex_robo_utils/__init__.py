@@ -11,9 +11,11 @@ from .dyn_util import HexDynUtil
 from .dyn_util import HexFricUtil
 from .obs_util import HexObsUtilJoint
 from .obs_util import HexObsUtilDisturbance
-from .ctrl_util import HexCtrlUtilMit
-from .ctrl_util import HexCtrlUtilPid
-from .ctrl_util import HexCtrlUtilInt
+from .ctrl_util import HexCtrlUtilMitJoint
+from .ctrl_util import HexCtrlUtilPidJoint
+from .ctrl_util import HexCtrlUtilIntJoint
+from .ctrl_util import HexCtrlUtilMitWork
+from .ctrl_util import HexCtrlUtilIntWork
 from .hdf5_reader import HexHdf5Reader
 from .hdf5_writer import HexHdf5Writer
 
@@ -65,7 +67,11 @@ __all__ = [
     'HexFricUtil',
     'HexObsUtilJoint',
     'HexObsUtilDisturbance',
-    'HexCtrlUtilMit',
+    'HexCtrlUtilMitJoint',
+    'HexCtrlUtilPidJoint',
+    'HexCtrlUtilIntJoint',
+    'HexCtrlUtilMitWork',
+    'HexCtrlUtilIntWork',
     'HexCtrlUtilPid',
     'HexCtrlUtilInt',
     'HexHdf5Reader',

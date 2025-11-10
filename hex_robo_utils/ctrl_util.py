@@ -9,7 +9,7 @@
 import numpy as np
 
 
-class HexCtrlUtilMit:
+class HexCtrlUtilMitJoint:
 
     def __init__(self, ctrl_limit: np.ndarray | None = None):
         if ctrl_limit is not None:
@@ -28,7 +28,7 @@ class HexCtrlUtilMit:
         return tau_ctrl + tau_comp
 
 
-class HexCtrlUtilPid:
+class HexCtrlUtilPidJoint:
 
     def __init__(
         self,
@@ -70,7 +70,7 @@ class HexCtrlUtilPid:
         return tau_ctrl + tau_comp
 
 
-class HexCtrlUtilInt:
+class HexCtrlUtilIntJoint:
 
     def __init__(
         self,
@@ -99,6 +99,64 @@ class HexCtrlUtilInt:
         # limit idx
         col = np.arange(err.shape[0])
         row = (np.fabs(err) < self.__near_threshold).astype(int)
+
+        # i_term limit
+        self.__i_term = np.clip(
+            self.__i_term,
+            self.__limit_lower[row, col],
+            self.__limit_upper[row, col],
+        )
+        return self.__i_term
+
+
+class HexCtrlUtilMitWork:
+
+    def __init__(self, ctrl_limit: np.ndarray | None = None):
+        if ctrl_limit is not None:
+            self.__ctrl_upper = ctrl_limit.copy()
+            self.__ctrl_lower = -ctrl_limit.copy()
+        else:
+            self.__ctrl_upper = None
+            self.__ctrl_lower = None
+
+    def __call__(self, kp, kd, se3_tar, dse3_tar, se3_cur, dse3_cur, tau_comp):
+        se3_err = se3_tar - se3_cur
+        dse3_err = dse3_tar - dse3_cur
+        tau_ctrl = kp * se3_err + kd * dse3_err
+        if (self.__ctrl_upper is not None) and (self.__ctrl_lower is not None):
+            tau_ctrl = np.clip(tau_ctrl, self.__ctrl_lower, self.__ctrl_upper)
+        return tau_ctrl + tau_comp
+
+
+class HexCtrlUtilIntWork:
+
+    def __init__(
+        self,
+        ki,
+        dt,
+        limit=np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+        near_ratio=0.5,
+        near_threshold=1e-1,
+    ):
+        # constants
+        self.__ki = ki.copy()
+        self.__dt = dt
+        self.__limit_upper = np.array(
+            [limit.copy(), limit.copy() * near_ratio])
+        self.__limit_lower = np.array(
+            [-limit.copy(), -limit.copy() * near_ratio])
+        self.__near_threshold = near_threshold
+
+        # variables
+        self.__i_term = np.zeros(limit.shape[0])
+
+    def __call__(self, cur_se3, tar_se3):
+        se3_err = tar_se3 - cur_se3
+        self.__i_term += self.__ki * se3_err * self.__dt
+
+        # limit idx
+        col = np.arange(se3_err.shape[0])
+        row = (np.fabs(se3_err) < self.__near_threshold).astype(int)
 
         # i_term limit
         self.__i_term = np.clip(

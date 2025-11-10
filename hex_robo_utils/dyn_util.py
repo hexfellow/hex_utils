@@ -13,7 +13,7 @@ from typing import Tuple, List
 
 from hex_robo_utils.math_utils import trans2part, part2trans
 from hex_robo_utils.math_utils import trans_inv, trans2se3
-from hex_robo_utils.math_utils import angle_norm
+from hex_robo_utils.math_utils import angle_norm, hat
 
 
 class HexDynUtil:
@@ -36,6 +36,7 @@ class HexDynUtil:
         self.__upper_limit = self.__model.upperPositionLimit
         self.__trans_end_in_last = part2trans(end_pose[:3], end_pose[3:])
         self.__trans_last_in_end = trans_inv(self.__trans_end_in_last)
+        self.__jac_trans = self.__cal_jac_trans(self.__trans_end_in_last)
 
         ### gravity vector
         self.__model.gravity.linear = gravity
@@ -52,6 +53,16 @@ class HexDynUtil:
     def get_joint_num(self) -> int:
         return self.__joint_num
 
+    def __cal_jac_trans(self, trans_end_in_last: np.ndarray) -> np.ndarray:
+        rot = trans_end_in_last[:3, :3]
+        pos = trans_end_in_last[:3, 3]
+
+        jac_trans = np.eye(6)
+        jac_trans[:3, :3] = rot.T
+        jac_trans[3:, :3] = -rot.T @ hat(pos)
+        jac_trans[3:, 3:] = rot.T
+        return jac_trans
+
     # get [M(q), C(q, q_dot), G(q), J(q), J_dot(q, q_dot)]
     # v = J @ q_dot
     def dynamic_params(
@@ -62,32 +73,23 @@ class HexDynUtil:
         # Compute all dynamic parameters
         pin.computeAllTerms(self.__model, self.__data, q, dq)
         m_mat = self.__data.M
-        c_mat = self.__data.C
+        c_mat = pin.computeCoriolisMatrix(self.__model, self.__data, q, dq)
         g_vec = self.__data.g
-        pin.computeJointJacobians(
+        jac = pin.computeJointJacobian(
             self.__model,
             self.__data,
             q,
+            self.__end_joint_id,
         )
-        jac = pin.getFrameJacobian(
-            self.__model,
-            self.__data,
-            self.__end_link_id,
-            pin.ReferenceFrame.LOCAL_WORLD_ALIGNED,
-        )
-        pin.computeJointJacobiansTimeVariation(
+        jac_dot = pin.computeJointJacobiansTimeVariation(
             self.__model,
             self.__data,
             q,
             dq,
         )
-        jac_dot = pin.getFrameJacobianTimeVariation(
-            self.__model,
-            self.__data,
-            self.__end_link_id,
-            pin.ReferenceFrame.LOCAL_WORLD_ALIGNED,
-        )
 
+        jac = self.__jac_trans @ jac
+        jac_dot = self.__jac_trans @ jac_dot
         return m_mat, c_mat, g_vec, jac, jac_dot
 
     # get [pose_1, pose_2, ..., pose_n]
@@ -136,7 +138,7 @@ class HexDynUtil:
             pin.forwardKinematics(self.__model, self.__data, result_q)
             trans_end_in_base = self.__data.oMi[
                 self.__end_joint_id].homogeneous
-            trans_tar_in_end = trans_base_in_tar @ trans_end_in_base
+            trans_tar_in_end = trans_inv(trans_end_in_base) @ trans_tar_in_base
             err = trans2se3(trans_tar_in_end)
 
             err_norm = np.linalg.norm(err)
@@ -151,11 +153,11 @@ class HexDynUtil:
                 result_q,
                 self.__end_joint_id,
             )
-            vel = -jac.T @ np.linalg.solve(jac @ jac.T + damp * np.eye(6), err)
+            dq = np.linalg.pinv(jac, rcond=damp) @ err
             result_q = pin.integrate(
                 self.__model,
                 result_q,
-                vel * dt,
+                dq * dt,
             )
 
         # post process
